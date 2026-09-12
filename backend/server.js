@@ -8,9 +8,6 @@ const { requireAuthApi } = require("./middleware/auth");
 const authRoutes = require("./routes/auth");
 const keysRoutes = require("./routes/keys");
 
-// The frontend now lives on Cloudflare Pages (a different origin), so the
-// API needs to know which origin(s) are allowed to call it with credentials.
-// Set this to your pages.dev URL (and/or custom domain), comma-separated.
 const allowedOrigins = (process.env.FRONTEND_ORIGINS || "")
   .split(",")
   .map((o) => o.trim())
@@ -23,13 +20,8 @@ if (missingEnvVars.length) {
 }
 
 const app = express();
-
-// Trust the first hop (Render/Vercel/Heroku/etc.) so req.secure and req.ip
-// reflect the original client instead of the proxy.
 app.set("trust proxy", 1);
 
-// CSP no longer needs to allow the app's own scripts/styles/images since
-// this process no longer serves any HTML/CSS/JS - that's all on Pages now.
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -39,8 +31,6 @@ app.use(helmet({
 
 app.use(cors({
   origin(origin, callback) {
-    // Allow same-origin/non-browser requests (no Origin header) and any
-    // explicitly allow-listed frontend origin.
     if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
@@ -53,8 +43,6 @@ app.use(cors({
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 
-// Blanket rate limit as defense in depth; the login route has its own
-// tighter, account-aware limiting on top of this.
 app.use(rateLimit({
   windowMs: 60 * 1000,
   max: 120,

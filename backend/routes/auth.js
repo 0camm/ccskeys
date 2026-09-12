@@ -60,10 +60,6 @@ router.post("/login", loginLimiter, async (req, res) => {
     await redis.del(attemptsKey);
     const token = crypto.randomBytes(32).toString("hex");
     await redis.set(`session:${token}`, username, { ex: SESSION_TTL_SECONDS });
-    // Frontend (Cloudflare Pages) and backend (Render) are different sites,
-    // so the session cookie must be SameSite=None to be sent on those
-    // cross-site fetch() calls. SameSite=None requires Secure, which Render
-    // gives us for free (it's always served over https).
     res.cookie("ccs_session", token, {
       httpOnly: true,
       sameSite: "none",
