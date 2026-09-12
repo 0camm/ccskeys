@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClientCheckStudios™ — Keys</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="page">
+    <div class="top-row">
+      <div class="header-brand" style="margin-bottom:0;">
+        <img class="header-logo" src="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png" alt="ClientCheckStudios logo">
+        <div>
+          <div style="font-size:15px;font-weight:600;">CCS Key Dashboard</div>
+          <div style="font-size:12px;color:#8a8a8a;" id="key-count">Loading keys...</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logout-btn">Log out</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-view="keys-view">Keys</button>
+      <button class="tab-btn" data-view="history-view">History</button>
+    </div>
+
+    <div class="view active" id="keys-view">
+      <div class="key-list" id="key-list"></div>
+    </div>
+
+    <div class="view" id="history-view">
+      <div class="key-list" id="history-list"></div>
+    </div>
+  </div>
+  <script src="/dashboard.js"></script>
+</body>
+</html>

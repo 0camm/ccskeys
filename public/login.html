@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClientCheckStudios™ — Admin Login</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="header-brand">
+        <img class="header-logo" src="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png" alt="ClientCheckStudios logo">
+        <div>
+          <div style="font-size:15px;font-weight:600;">ClientCheckStudios</div>
+          <div style="font-size:12px;color:#8a8a8a;">Key Admin</div>
+        </div>
+      </div>
+      <h1>Sign in</h1>
+      <p class="subtitle">Enter your admin credentials to access the key dashboard.</p>
+      <form id="login-form">
+        <label for="username">Username</label>
+        <input type="text" id="username" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" required>
+        <p class="error-text" id="error-text">Invalid credentials.</p>
+        <button type="submit" class="btn-primary">Sign in</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById("login-form");
+    const errorText = document.getElementById("error-text");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorText.style.display = "none";
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        window.location.href = "/";
+      } else {
+        errorText.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
