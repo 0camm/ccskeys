@@ -9,6 +9,7 @@
 <title>ClientCheckStudios™ — Admin Login</title>
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png">
 <link rel="stylesheet" href="/style.css">
+<script src="/config.js"></script>
 </head>
 <body>
   <div class="login-page">
@@ -50,13 +51,14 @@
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
       try {
-        const res = await fetch("/api/auth/login", {
+        const res = await fetch(`${window.API_BASE_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ username, password })
         });
         if (res.ok) {
-          window.location.href = "/";
+          window.location.href = "/dashboard.html";
           return;
         }
         if (res.status === 429) {

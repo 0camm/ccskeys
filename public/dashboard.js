@@ -75,7 +75,11 @@ async function copyKey(id) {
   if (!entry) return;
   try {
     await navigator.clipboard.writeText(entry.key);
-    const res = await fetch(`/api/keys/${encodeURIComponent(id)}/copy`, { method: "POST" });
+    const res = await fetch(`${window.API_BASE_URL}/api/keys/${encodeURIComponent(id)}/copy`, {
+      method: "POST",
+      credentials: "include"
+    });
+    if (res.status === 401) return redirectToLogin();
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       console.error("Copy request failed:", res.status, body);
@@ -100,9 +104,14 @@ function renderHistory(history) {
   });
 }
 
+function redirectToLogin() {
+  window.location.href = "/login.html";
+}
+
 async function loadKeys() {
   try {
-    const res = await fetch("/api/keys");
+    const res = await fetch(`${window.API_BASE_URL}/api/keys`, { credentials: "include" });
+    if (res.status === 401) return redirectToLogin();
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       console.error("Failed to load keys:", res.status, body);
@@ -121,7 +130,8 @@ async function loadKeys() {
 
 async function loadHistory() {
   try {
-    const res = await fetch("/api/history");
+    const res = await fetch(`${window.API_BASE_URL}/api/history`, { credentials: "include" });
+    if (res.status === 401) return redirectToLogin();
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       console.error("Failed to load history:", res.status, body);
@@ -154,11 +164,11 @@ tabButtons.forEach((btn) => {
 
 logoutBtn.addEventListener("click", async () => {
   try {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch(`${window.API_BASE_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
   } catch (err) {
     console.error("Logout request failed:", err);
   } finally {
-    window.location.href = "/login.html";
+    redirectToLogin();
   }
 });
 
