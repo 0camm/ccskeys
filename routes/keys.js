@@ -9,8 +9,8 @@ router.get("/keys", async (req, res) => {
     return res.json({ keys: [] });
   }
   const raw = await redis.hmget("keys", ...order);
-  const keys = order.map((id) => {
-    const entry = raw[id];
+  const keys = order.map((id, index) => {
+    const entry = raw[index];
     if (!entry) return null;
     return typeof entry === "string" ? JSON.parse(entry) : entry;
   }).filter(Boolean);
