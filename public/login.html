@@ -38,14 +38,22 @@
       errorText.style.display = "none";
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-      if (res.ok) {
-        window.location.href = "/";
-      } else {
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        if (res.ok) {
+          window.location.href = "/";
+        } else {
+          const body = await res.json().catch(() => ({}));
+          console.error("Login failed:", res.status, body);
+          errorText.style.display = "block";
+        }
+      } catch (err) {
+        console.error("Login request failed:", err);
+        errorText.textContent = "Could not reach the server. Try again.";
         errorText.style.display = "block";
       }
     });

@@ -41,9 +41,17 @@ function renderKeys(keys) {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
       const value = btn.dataset.key;
-      await navigator.clipboard.writeText(value);
-      await fetch(`/api/keys/${id}/copy`, { method: "POST" });
-      loadKeys();
+      try {
+        await navigator.clipboard.writeText(value);
+        const res = await fetch(`/api/keys/${id}/copy`, { method: "POST" });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          console.error("Copy request failed:", res.status, body);
+        }
+        await loadKeys();
+      } catch (err) {
+        console.error("Copy action failed:", err);
+      }
     });
   });
 }
@@ -66,15 +74,39 @@ function renderHistory(history) {
 }
 
 async function loadKeys() {
-  const res = await fetch("/api/keys");
-  const data = await res.json();
-  renderKeys(data.keys);
+  try {
+    const res = await fetch("/api/keys");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error("Failed to load keys:", res.status, body);
+      keyList.innerHTML = `<div class="empty-state">Failed to load keys (${res.status}). Check server logs.</div>`;
+      keyCount.textContent = "Error";
+      return;
+    }
+    const data = await res.json();
+    renderKeys(data.keys || []);
+  } catch (err) {
+    console.error("Failed to load keys:", err);
+    keyList.innerHTML = '<div class="empty-state">Failed to load keys. Check console/server logs.</div>';
+    keyCount.textContent = "Error";
+  }
 }
 
 async function loadHistory() {
-  const res = await fetch("/api/history");
-  const data = await res.json();
-  renderHistory(data.history);
+  try {
+    const res = await fetch("/api/history");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error("Failed to load history:", res.status, body);
+      historyList.innerHTML = `<div class="empty-state">Failed to load history (${res.status}).</div>`;
+      return;
+    }
+    const data = await res.json();
+    renderHistory(data.history || []);
+  } catch (err) {
+    console.error("Failed to load history:", err);
+    historyList.innerHTML = '<div class="empty-state">Failed to load history. Check console/server logs.</div>';
+  }
 }
 
 tabButtons.forEach((btn) => {
@@ -90,8 +122,13 @@ tabButtons.forEach((btn) => {
 });
 
 logoutBtn.addEventListener("click", async () => {
-  await fetch("/api/auth/logout", { method: "POST" });
-  window.location.href = "/login.html";
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch (err) {
+    console.error("Logout request failed:", err);
+  } finally {
+    window.location.href = "/login.html";
+  }
 });
 
 loadKeys();
