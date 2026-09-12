@@ -1,3 +1,5 @@
+"use strict";
+
 const keyList = document.getElementById("key-list");
 const historyList = document.getElementById("history-list");
 const keyCount = document.getElementById("key-count");
@@ -5,70 +7,95 @@ const tabButtons = document.querySelectorAll(".tab-btn");
 const views = document.querySelectorAll(".view");
 const logoutBtn = document.getElementById("logout-btn");
 
+// Keys are looked up by id from this in-memory map rather than round-tripped
+// through HTML attributes, so nothing from the key data ever needs to be
+// parsed back out of the DOM.
+let keysById = new Map();
+
 function formatTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   return d.toLocaleString();
 }
 
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function clear(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function renderEmpty(container, message) {
+  clear(container);
+  container.appendChild(el("div", "empty-state", message));
+}
+
 function renderKeys(keys) {
-  keyList.innerHTML = "";
+  keysById = new Map(keys.map((k) => [k.id, k]));
+  clear(keyList);
+
   if (!keys.length) {
-    keyList.innerHTML = '<div class="empty-state">No keys loaded yet.</div>';
+    renderEmpty(keyList, "No keys loaded yet.");
     keyCount.textContent = "0 keys";
     return;
   }
-  const usedCount = keys.filter((k) => k.copied).length;
-  keyCount.textContent = `${keys.length} keys · ${usedCount} used`;
-  keys.forEach((k) => {
-    const row = document.createElement("div");
-    row.className = "key-row" + (k.copied ? " copied" : "");
-    row.innerHTML = `
-      <div class="key-left">
-        <div class="key-value">${k.key}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px;">
-        <span class="key-status${k.copied ? " used" : ""}">${k.copied ? "Copied " + formatTime(k.copiedAt) : "Unused"}</span>
-        <button class="copy-btn${k.copied ? " used-btn" : ""}" data-id="${k.id}" data-key="${k.key}">
-          ${k.copied ? "Copy again" : "Click to copy"}
-        </button>
-      </div>
-    `;
-    keyList.appendChild(row);
-  });
 
-  keyList.querySelectorAll(".copy-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = btn.dataset.id;
-      const value = btn.dataset.key;
-      try {
-        await navigator.clipboard.writeText(value);
-        const res = await fetch(`/api/keys/${id}/copy`, { method: "POST" });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          console.error("Copy request failed:", res.status, body);
-        }
-        await loadKeys();
-      } catch (err) {
-        console.error("Copy action failed:", err);
-      }
-    });
+  const usedCount = keys.filter((k) => k.copied).length;
+  keyCount.textContent = `${keys.length} keys, ${usedCount} used`;
+
+  keys.forEach((k) => {
+    const row = el("div", "key-row" + (k.copied ? " copied" : ""));
+
+    const left = el("div", "key-left");
+    left.appendChild(el("div", "key-value", k.key));
+
+    const right = el("div", "key-right");
+    right.appendChild(el("span", "key-status" + (k.copied ? " used" : ""),
+      k.copied ? "Copied " + formatTime(k.copiedAt) : "Unused"));
+
+    const btn = el("button", "copy-btn" + (k.copied ? " used-btn" : ""),
+      k.copied ? "Copy again" : "Click to copy");
+    btn.type = "button";
+    btn.dataset.id = k.id;
+    btn.addEventListener("click", () => copyKey(k.id));
+    right.appendChild(btn);
+
+    row.appendChild(left);
+    row.appendChild(right);
+    keyList.appendChild(row);
   });
 }
 
+async function copyKey(id) {
+  const entry = keysById.get(id);
+  if (!entry) return;
+  try {
+    await navigator.clipboard.writeText(entry.key);
+    const res = await fetch(`/api/keys/${encodeURIComponent(id)}/copy`, { method: "POST" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error("Copy request failed:", res.status, body);
+    }
+    await loadKeys();
+  } catch (err) {
+    console.error("Copy action failed:", err);
+  }
+}
+
 function renderHistory(history) {
-  historyList.innerHTML = "";
+  clear(historyList);
   if (!history.length) {
-    historyList.innerHTML = '<div class="empty-state">No copy activity yet.</div>';
+    renderEmpty(historyList, "No copy activity yet.");
     return;
   }
   history.forEach((h) => {
-    const row = document.createElement("div");
-    row.className = "history-row";
-    row.innerHTML = `
-      <span class="history-key">${h.key}</span>
-      <span class="history-time">${formatTime(h.copiedAt)}</span>
-    `;
+    const row = el("div", "history-row");
+    row.appendChild(el("span", "history-key", h.key));
+    row.appendChild(el("span", "history-time", formatTime(h.copiedAt)));
     historyList.appendChild(row);
   });
 }
@@ -79,7 +106,7 @@ async function loadKeys() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       console.error("Failed to load keys:", res.status, body);
-      keyList.innerHTML = `<div class="empty-state">Failed to load keys (${res.status}). Check server logs.</div>`;
+      renderEmpty(keyList, `Failed to load keys (${res.status}). Check server logs.`);
       keyCount.textContent = "Error";
       return;
     }
@@ -87,7 +114,7 @@ async function loadKeys() {
     renderKeys(data.keys || []);
   } catch (err) {
     console.error("Failed to load keys:", err);
-    keyList.innerHTML = '<div class="empty-state">Failed to load keys. Check console/server logs.</div>';
+    renderEmpty(keyList, "Failed to load keys. Check console/server logs.");
     keyCount.textContent = "Error";
   }
 }
@@ -98,22 +125,26 @@ async function loadHistory() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       console.error("Failed to load history:", res.status, body);
-      historyList.innerHTML = `<div class="empty-state">Failed to load history (${res.status}).</div>`;
+      renderEmpty(historyList, `Failed to load history (${res.status}).`);
       return;
     }
     const data = await res.json();
     renderHistory(data.history || []);
   } catch (err) {
     console.error("Failed to load history:", err);
-    historyList.innerHTML = '<div class="empty-state">Failed to load history. Check console/server logs.</div>';
+    renderEmpty(historyList, "Failed to load history. Check console/server logs.");
   }
 }
 
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
-    tabButtons.forEach((b) => b.classList.remove("active"));
+    tabButtons.forEach((b) => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
     views.forEach((v) => v.classList.remove("active"));
     btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
     document.getElementById(btn.dataset.view).classList.add("active");
     if (btn.dataset.view === "history-view") {
       loadHistory();

@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const path = require("path");
 const { requireAuth, requireAuthApi } = require("./middleware/auth");
 const authRoutes = require("./routes/auth");
@@ -14,8 +16,40 @@ if (missingEnvVars.length) {
 
 const app = express();
 
-app.use(express.json());
+// Trust the first hop (Render/Vercel/Heroku/etc.) so req.secure and req.ip
+// reflect the original client instead of the proxy.
+app.set("trust proxy", 1);
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "https://raw.githubusercontent.com", "data:"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  referrerPolicy: { policy: "no-referrer" },
+  crossOriginEmbedderPolicy: false
+}));
+
+app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
+
+// Blanket rate limit as defense in depth; the login route has its own
+// tighter, account-aware limiting on top of this.
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false
+}));
 
 app.use((req, res, next) => {
   console.log(`[request] ${req.method} ${req.path}`);

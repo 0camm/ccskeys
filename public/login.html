@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
 <title>ClientCheckStudios™ — Admin Login</title>
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png">
 <link rel="stylesheet" href="/style.css">
@@ -13,8 +16,8 @@
       <div class="header-brand">
         <img class="header-logo" src="https://raw.githubusercontent.com/0camm/clientcheckstudios/main/ccs.png" alt="ClientCheckStudios logo">
         <div>
-          <div style="font-size:15px;font-weight:600;">ClientCheckStudios</div>
-          <div style="font-size:12px;color:#8a8a8a;">Key Admin</div>
+          <div class="brand-title">ClientCheckStudios</div>
+          <div class="brand-sub">Key Admin</div>
         </div>
       </div>
       <h1>Sign in</h1>
@@ -30,12 +33,20 @@
     </div>
   </div>
   <script>
+    "use strict";
     const form = document.getElementById("login-form");
     const errorText = document.getElementById("error-text");
+    const submitBtn = form.querySelector(".btn-primary");
+
+    function showError(message) {
+      errorText.textContent = message;
+      errorText.style.display = "block";
+    }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       errorText.style.display = "none";
+      submitBtn.disabled = true;
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
       try {
@@ -46,15 +57,20 @@
         });
         if (res.ok) {
           window.location.href = "/";
+          return;
+        }
+        if (res.status === 429) {
+          showError("Too many attempts. Wait a bit before trying again.");
         } else {
           const body = await res.json().catch(() => ({}));
           console.error("Login failed:", res.status, body);
-          errorText.style.display = "block";
+          showError("Invalid credentials.");
         }
       } catch (err) {
         console.error("Login request failed:", err);
-        errorText.textContent = "Could not reach the server. Try again.";
-        errorText.style.display = "block";
+        showError("Could not reach the server. Try again.");
+      } finally {
+        submitBtn.disabled = false;
       }
     });
   </script>
