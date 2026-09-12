@@ -32,6 +32,7 @@ app.set("trust proxy", 1);
 // this process no longer serves any HTML/CSS/JS - that's all on Pages now.
 app.use(helmet({
   contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   referrerPolicy: { policy: "no-referrer" },
   crossOriginEmbedderPolicy: false
 }));
